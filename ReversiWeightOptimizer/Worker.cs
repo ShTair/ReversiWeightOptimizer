@@ -15,6 +15,7 @@ internal class Worker
     public async Task ExecuteAsync()
     {
         Console.WriteLine("=== AI Weight Optimization Start ===");
+        Console.WriteLine($"{DateTime.Now:yyyy/MM/dd HH:mm:ss.f}");
 
         var r = new Random();
         var enemy = Enumerable.Range(0, 5).Select(t => AIWeightsSet.RandomWeights(r)).ToList();
@@ -22,6 +23,7 @@ internal class Worker
         var bestWeight = await _ga.OptimizeAsync(enemy);
 
         Console.WriteLine("=== Optimization Complete! ===");
+        Console.WriteLine($"{DateTime.Now:yyyy/MM/dd HH:mm:ss.f}");
 
         Console.WriteLine();
         Console.WriteLine($"phase,Stone Difference,Position Weight,Stable Stone,Mobility,Corner Risk,Edge Control,Frontier Discs,Parity");

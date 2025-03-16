@@ -45,7 +45,7 @@ internal class GeneticAlgorithm
             var bestAI = scores.OrderByDescending(kv => kv.Value).First();
 
             Console.WriteLine();
-            Console.WriteLine(sw.Elapsed);
+            Console.WriteLine($"{DateTime.Now:yyyy/MM/dd HH:mm:ss.f} {sw.Elapsed}");
             Console.WriteLine($"Best AI Score: {bestAI.Value}");
             Console.WriteLine(bestAI.Key);
             Console.WriteLine();
@@ -111,7 +111,7 @@ internal class GeneticAlgorithm
                 }
             }
             scores[ai] = score;
-            Console.WriteLine(sw.Elapsed);
+            Console.WriteLine($"{DateTime.Now:yyyy/MM/dd HH:mm:ss.f} {sw.Elapsed}");
             Console.WriteLine($"score: {score}");
             _consoleTitleService.SetBestScore((int)score);
         }
