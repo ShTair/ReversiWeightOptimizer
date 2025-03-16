@@ -27,6 +27,10 @@ internal class Worker
         Console.WriteLine($"phase,Stone Difference,Position Weight,Stable Stone,Mobility,Corner Risk,Edge Control,Frontier Discs,Parity");
         Console.WriteLine(bestWeight);
 
-        Console.ReadLine();
+        while (true)
+        {
+            Console.WriteLine("終了するにはeを入力");
+            if (Console.ReadLine() == "e") break;
+        }
     }
 }
