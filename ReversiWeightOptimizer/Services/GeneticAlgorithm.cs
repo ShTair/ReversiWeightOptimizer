@@ -2,7 +2,7 @@
 using ReversiWeightOptimizer.Reversi.AI;
 using System.Diagnostics;
 
-namespace ReversiWeightOptimizer;
+namespace ReversiWeightOptimizer.Services;
 
 internal class GeneticAlgorithm
 {
@@ -12,24 +12,33 @@ internal class GeneticAlgorithm
     private const float MutationRate = 0.3f;
     private readonly Random random = new();
 
+    private readonly ConsoleTitleService _consoleTitleService;
+
     private readonly Dictionary<(AIWeightsSet, AIWeightsSet), ReversiGame[]> _scores = [];
+
+    public GeneticAlgorithm(ConsoleTitleService consoleTitleService)
+    {
+        _consoleTitleService = consoleTitleService;
+    }
 
     public async Task<AIWeightsSet> OptimizeAsync(List<AIWeightsSet> enemy)
     {
-        List<AIWeightsSet> population = InitializePopulation(enemy);
+        _consoleTitleService.SetGenerations(Generations);
 
-        for (int generation = 0; generation < Generations; generation++)
+        var population = InitializePopulation(enemy);
+
+        for (var generation = 0; generation < Generations; generation++)
         {
             var sw = new Stopwatch();
             sw.Start();
 
             Console.WriteLine($"########################################################################");
             Console.WriteLine($"Generation {generation + 1} / {Generations}");
-            Console.Title = $"ReversiAI {generation + 1} / {Generations}";
+            _consoleTitleService.SetGeneration(generation + 1);
 
             var scores = await EvaluatePopulationAsync(generation, population, enemy);
 
-            List<AIWeightsSet> selected = SelectTopPerformers(scores);
+            var selected = SelectTopPerformers(scores);
 
             population = GenerateNextGeneration(selected);
 
@@ -48,7 +57,7 @@ internal class GeneticAlgorithm
     private List<AIWeightsSet> InitializePopulation(List<AIWeightsSet> enemy)
     {
         var population = new List<AIWeightsSet>();
-        int i = population.Count;
+        var i = population.Count;
         for (; i < PopulationSize; i++)
         {
             population.Add(AIWeightsSet.RandomWeights(random));
@@ -76,7 +85,7 @@ internal class GeneticAlgorithm
                     _scores.Add((ai, opponent), games);
                 }
 
-                for (int j = 0; j < 2; j++)
+                for (var j = 0; j < 2; j++)
                 {
                     var (b, w) = games[j].GetScore();
                     var s = b - w;
@@ -104,6 +113,7 @@ internal class GeneticAlgorithm
             scores[ai] = score;
             Console.WriteLine(sw.Elapsed);
             Console.WriteLine($"score: {score}");
+            _consoleTitleService.SetBestScore((int)score);
         }
 
         return scores;
@@ -111,27 +121,27 @@ internal class GeneticAlgorithm
 
     private ReversiGame PlayMatch(AIWeightsSet ai1, AIWeightsSet ai2)
     {
-        ReversiGame game = new ReversiGame();
-        ReversiAI player1 = new ReversiAI(game, new Dictionary<string, AIWeights> {
+        var game = new ReversiGame();
+        var player1 = new ReversiAI(game, new Dictionary<string, AIWeights> {
             { "opening", ai1.Opening },
             { "midgame", ai1.Midgame },
             { "endgame", ai1.Endgame },
         });
-        ReversiAI player2 = new ReversiAI(game, new Dictionary<string, AIWeights> {
+        var player2 = new ReversiAI(game, new Dictionary<string, AIWeights> {
             { "opening", ai2.Opening },
             { "midgame", ai2.Midgame },
             { "endgame", ai2.Endgame },
         });
 
-        byte currentPlayer = Board.BLACK;
+        var currentPlayer = Board.BLACK;
         while (!game.IsGameOver())
         {
-            Move? move = (currentPlayer == Board.BLACK) ? player1.GetBestMove(currentPlayer) : player2.GetBestMove(currentPlayer);
+            var move = currentPlayer == Board.BLACK ? player1.GetBestMove(currentPlayer) : player2.GetBestMove(currentPlayer);
             if (move != null)
             {
                 game.PlaceStone(move.Value.X, move.Value.Y, currentPlayer);
             }
-            currentPlayer = (currentPlayer == Board.BLACK) ? Board.WHITE : Board.BLACK;
+            currentPlayer = currentPlayer == Board.BLACK ? Board.WHITE : Board.BLACK;
         }
 
 
@@ -153,9 +163,9 @@ internal class GeneticAlgorithm
 
         while (newGeneration.Count < PopulationSize)
         {
-            AIWeightsSet parent1 = selected[random.Next(selected.Count)];
-            AIWeightsSet parent2 = selected[random.Next(selected.Count)];
-            AIWeightsSet child = Crossover(parent1, parent2);
+            var parent1 = selected[random.Next(selected.Count)];
+            var parent2 = selected[random.Next(selected.Count)];
+            var child = Crossover(parent1, parent2);
             child = Mutate(child);
             newGeneration.Add(child);
         }

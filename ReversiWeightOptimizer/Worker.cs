@@ -1,9 +1,17 @@
 ﻿using ReversiWeightOptimizer.Reversi.AI;
+using ReversiWeightOptimizer.Services;
 
 namespace ReversiWeightOptimizer;
 
-public class Worker
+internal class Worker
 {
+    private readonly GeneticAlgorithm _ga;
+
+    public Worker(GeneticAlgorithm ga)
+    {
+        _ga = ga;
+    }
+
     public async Task ExecuteAsync()
     {
         Console.WriteLine("=== AI Weight Optimization Start ===");
@@ -11,8 +19,7 @@ public class Worker
         var r = new Random();
         var enemy = Enumerable.Range(0, 5).Select(t => AIWeightsSet.RandomWeights(r)).ToList();
 
-        var ga = new GeneticAlgorithm();
-        var bestWeight = await ga.OptimizeAsync(enemy);
+        var bestWeight = await _ga.OptimizeAsync(enemy);
 
         Console.WriteLine("=== Optimization Complete! ===");
 
