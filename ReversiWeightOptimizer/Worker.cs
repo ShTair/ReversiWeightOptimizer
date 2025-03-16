@@ -1,24 +1,25 @@
-namespace ReversiWeightOptimizer
+﻿using ReversiWeightOptimizer.Reversi.AI;
+
+namespace ReversiWeightOptimizer;
+
+public class Worker
 {
-    public class Worker : BackgroundService
+    public async Task ExecuteAsync()
     {
-        private readonly ILogger<Worker> _logger;
+        Console.WriteLine("=== AI Weight Optimization Start ===");
 
-        public Worker(ILogger<Worker> logger)
-        {
-            _logger = logger;
-        }
+        var r = new Random();
+        var enemy = Enumerable.Range(0, 5).Select(t => AIWeightsSet.RandomWeights(r)).ToList();
 
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-        {
-            while (!stoppingToken.IsCancellationRequested)
-            {
-                if (_logger.IsEnabled(LogLevel.Information))
-                {
-                    _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
-                }
-                await Task.Delay(1000, stoppingToken);
-            }
-        }
+        var ga = new GeneticAlgorithm();
+        var bestWeight = await ga.OptimizeAsync(enemy);
+
+        Console.WriteLine("=== Optimization Complete! ===");
+
+        Console.WriteLine();
+        Console.WriteLine($"phase,Stone Difference,Position Weight,Stable Stone,Mobility,Corner Risk,Edge Control,Frontier Discs,Parity");
+        Console.WriteLine(bestWeight);
+
+        Console.ReadLine();
     }
 }
