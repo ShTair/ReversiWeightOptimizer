@@ -1,0 +1,57 @@
+﻿name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: "release"
+  cancel-in-progress: true
+
+env:
+  TAG_VERSION: v1
+  CONFIGURATION: Release
+  DOTNET_CORE_VERSION: 8.0.x
+  WORKING_DIRECTORY: ${{ github.event.repository.name }}
+  AZURE_WEBAPP_PACKAGE_PATH: published
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+  
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: ${{ env.DOTNET_CORE_VERSION }}
+
+    - name: Publish
+      run: dotnet publish "${{ env.WORKING_DIRECTORY }}" -c ${{ env.CONFIGURATION }} -o "${{ env.AZURE_WEBAPP_PACKAGE_PATH }}/x64/${{ env.WORKING_DIRECTORY }}" -p:DebugType=None
+    - name: Zip
+      run: Compress-Archive -Path ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}/x64/${{ env.WORKING_DIRECTORY }} -DestinationPath ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}/x64.zip
+
+    - name: Git Config
+      run: |
+        git config --local user.email "ShTair-Bot@users.noreply.github.com"
+        git config --local user.name "ShTair-Bot"
+
+    - name: Git Tag
+      run: |
+        git tag -f ${{ env.TAG_VERSION }}
+        git push origin ${{ env.TAG_VERSION }} -f
+
+    - uses: softprops/action-gh-release@v2
+      with:
+        files: |
+          ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}/x64.zip
+        tag_name: ${{ env.TAG_VERSION }}
