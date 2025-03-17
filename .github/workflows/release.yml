@@ -24,7 +24,7 @@ env:
 
 jobs:
   release:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
       with:
@@ -35,15 +35,38 @@ jobs:
       with:
         dotnet-version: ${{ env.DOTNET_CORE_VERSION }}
 
-    - name: Publish
-      run: dotnet publish "${{ env.WORKING_DIRECTORY }}" -c ${{ env.CONFIGURATION }} -o "${{ env.AZURE_WEBAPP_PACKAGE_PATH }}/x64/${{ env.WORKING_DIRECTORY }}" -p:DebugType=None
-    - name: Zip
-      run: Compress-Archive -Path ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}/x64/${{ env.WORKING_DIRECTORY }} -DestinationPath ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}/x64.zip
-
-    - name: Git Config
+    - name: Build and Publish for Linux
       run: |
-        git config --local user.email "ShTair-Bot@users.noreply.github.com"
-        git config --local user.name "ShTair-Bot"
+        dotnet publish ${{ env.WORKING_DIRECTORY }} \
+        -c ${{ env.CONFIGURATION }} \
+        -o "${{ env.AZURE_WEBAPP_PACKAGE_PATH }}/linux-x64/${{ env.WORKING_DIRECTORY }}" \
+        -r linux-x64 \
+        --no-self-contained \
+        -p:PublishSingleFile=true \
+        -p:DebugType=None
+    - name: Create ZIP Archive for Linux
+      run: |
+        cd "${{ env.AZURE_WEBAPP_PACKAGE_PATH }}/linux-x64"
+        zip -r "../${{ env.WORKING_DIRECTORY }}_linux-x64.zip" "${{ env.WORKING_DIRECTORY }}"
+
+    - name: Build and Publish for Windows
+      run: |
+        dotnet publish ${{ env.WORKING_DIRECTORY }} \
+        -c ${{ env.CONFIGURATION }} \
+        -o "${{ env.AZURE_WEBAPP_PACKAGE_PATH }}/win-x64/${{ env.WORKING_DIRECTORY }}" \
+        -r win-x64 \
+        --no-self-contained \
+        -p:PublishSingleFile=true \
+        -p:DebugType=None
+    - name: Create ZIP Archive for Windows
+      run: |
+        cd "${{ env.AZURE_WEBAPP_PACKAGE_PATH }}/win-x64"
+        zip -r "../${{ env.WORKING_DIRECTORY }}_win-x64.zip" "${{ env.WORKING_DIRECTORY }}"
+
+    - name: Configure Git
+      run: |
+        git config --local user.email "${{ github.event.pusher.email }}"
+        git config --local user.name "${{ github.event.pusher.name }}"
 
     - name: Git Tag
       run: |
@@ -53,5 +76,6 @@ jobs:
     - uses: softprops/action-gh-release@v2
       with:
         files: |
-          ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}/x64.zip
+          ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}/${{ env.WORKING_DIRECTORY }}_linux-x64.zip
+          ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}/${{ env.WORKING_DIRECTORY }}_win-x64.zip
         tag_name: ${{ env.TAG_VERSION }}
