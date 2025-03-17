@@ -8,7 +8,7 @@ internal class ConsoleTitleService
 
     private int _generation;
 
-    private int _bestScore;
+    private int _bestScore = int.MinValue;
 
     private void UpdateTitle() => Console.Title = $"{_generation}/{_generations} : {_bestScore} {Title}";
 

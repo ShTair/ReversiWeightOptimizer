@@ -1,4 +1,5 @@
-﻿using ReversiWeightOptimizer.Reversi;
+﻿using Microsoft.Extensions.Options;
+using ReversiWeightOptimizer.Reversi;
 using ReversiWeightOptimizer.Reversi.AI;
 using System.Diagnostics;
 
@@ -6,37 +7,48 @@ namespace ReversiWeightOptimizer.Services;
 
 internal class GeneticAlgorithm
 {
-    private const int PopulationSize = 8;
-    private const int TopPerformersSize = 3;
-    private const int Generations = 20;
-    private const float MutationRate = 0.3f;
-    private readonly Random random = new();
+    private readonly Random _random = new();
+
+    private readonly int _populationSize;
+    private readonly int _topPerformersSize;
+    private readonly int _generations;
+    private readonly float _mutationRate;
 
     private readonly ConsoleTitleService _consoleTitleService;
 
     private readonly Dictionary<(AIWeightsSet, AIWeightsSet), ReversiGame[]> _scores = [];
 
-    public GeneticAlgorithm(ConsoleTitleService consoleTitleService)
+    public GeneticAlgorithm(IOptions<Options> options, ConsoleTitleService consoleTitleService)
     {
+        _populationSize = options.Value.PopulationSize;
+        _topPerformersSize = options.Value.TopPerformersSize;
+        _generations = options.Value.Generations;
+        _mutationRate = options.Value.MutationRate;
+
         _consoleTitleService = consoleTitleService;
     }
 
-    public async Task<AIWeightsSet> OptimizeAsync(List<AIWeightsSet> enemy)
+    public async Task<AIWeightsSet> OptimizeAsync(List<AIWeightsSet> enemies)
     {
-        _consoleTitleService.SetGenerations(Generations);
+        Console.WriteLine($"EnemySize: {enemies.Count}");
+        Console.WriteLine($"PopulationSize: {_populationSize}");
+        Console.WriteLine($"TopPerformersSize: {_topPerformersSize}");
+        Console.WriteLine($"MutationRate: {_mutationRate}");
+        Console.WriteLine();
+        _consoleTitleService.SetGenerations(_generations);
 
-        var population = InitializePopulation(enemy);
+        var population = InitializePopulation(enemies);
 
-        for (var generation = 0; generation < Generations; generation++)
+        for (var generation = 0; generation < _generations; generation++)
         {
             var sw = new Stopwatch();
             sw.Start();
 
             Console.WriteLine($"########################################################################");
-            Console.WriteLine($"Generation {generation + 1} / {Generations}");
+            Console.WriteLine($"Generation: {generation + 1} / {_generations}");
             _consoleTitleService.SetGeneration(generation + 1);
 
-            var scores = await EvaluatePopulationAsync(generation, population, enemy);
+            var scores = await EvaluatePopulationAsync(generation, population, enemies);
 
             var selected = SelectTopPerformers(scores);
 
@@ -54,18 +66,18 @@ internal class GeneticAlgorithm
         return population[0];
     }
 
-    private List<AIWeightsSet> InitializePopulation(List<AIWeightsSet> enemy)
+    private List<AIWeightsSet> InitializePopulation(List<AIWeightsSet> enemies)
     {
         var population = new List<AIWeightsSet>();
         var i = population.Count;
-        for (; i < PopulationSize; i++)
+        for (; i < _populationSize; i++)
         {
-            population.Add(AIWeightsSet.RandomWeights(random));
+            population.Add(AIWeightsSet.RandomWeights(_random));
         }
         return population;
     }
 
-    private async Task<Dictionary<AIWeightsSet, float>> EvaluatePopulationAsync(int generation, List<AIWeightsSet> population, List<AIWeightsSet> enemy)
+    private async Task<Dictionary<AIWeightsSet, float>> EvaluatePopulationAsync(int generation, List<AIWeightsSet> population, List<AIWeightsSet> enemies)
     {
         var scores = new Dictionary<AIWeightsSet, float>();
 
@@ -75,7 +87,7 @@ internal class GeneticAlgorithm
             sw.Start();
             Console.WriteLine($"==================== {generation + 1} : {i + 1} ========================");
             float score = 0;
-            foreach (var opponent in enemy)
+            foreach (var opponent in enemies)
             {
                 if (ai == opponent) continue;
 
@@ -104,7 +116,6 @@ internal class GeneticAlgorithm
                     (Console.ForegroundColor, Console.BackgroundColor) = z;
 
                     Console.WriteLine($" : {s}");
-
 
                     //games[j].board.PrintBoard();
                     score += s;
@@ -151,7 +162,7 @@ internal class GeneticAlgorithm
     private List<AIWeightsSet> SelectTopPerformers(Dictionary<AIWeightsSet, float> scores)
     {
         return scores.OrderByDescending(kv => kv.Value)
-                     .Take(TopPerformersSize)
+                     .Take(_topPerformersSize)
                      .Select(kv => kv.Key)
                      .ToList();
     }
@@ -161,10 +172,10 @@ internal class GeneticAlgorithm
         var newGeneration = new List<AIWeightsSet>();
         newGeneration.AddRange(selected);
 
-        while (newGeneration.Count < PopulationSize)
+        while (newGeneration.Count < _populationSize)
         {
-            var parent1 = selected[random.Next(selected.Count)];
-            var parent2 = selected[random.Next(selected.Count)];
+            var parent1 = selected[_random.Next(selected.Count)];
+            var parent2 = selected[_random.Next(selected.Count)];
             var child = Crossover(parent1, parent2);
             child = Mutate(child);
             newGeneration.Add(child);
@@ -190,14 +201,14 @@ internal class GeneticAlgorithm
     private AIWeights CrossoverWeights(AIWeights parent1, AIWeights parent2)
     {
         return new AIWeights(
-            random.NextDouble() < 0.5 ? parent1.StoneDifference : parent2.StoneDifference,
-            random.NextDouble() < 0.5 ? parent1.PositionWeight : parent2.PositionWeight,
-            random.NextDouble() < 0.5 ? parent1.StableStone : parent2.StableStone,
-            random.NextDouble() < 0.5 ? parent1.Mobility : parent2.Mobility,
-            random.NextDouble() < 0.5 ? parent1.CornerRisk : parent2.CornerRisk,
-            random.NextDouble() < 0.5 ? parent1.EdgeControl : parent2.EdgeControl,
-            random.NextDouble() < 0.5 ? parent1.FrontierDiscs : parent2.FrontierDiscs,
-            random.NextDouble() < 0.5 ? parent1.Parity : parent2.Parity
+            _random.NextDouble() < 0.5 ? parent1.StoneDifference : parent2.StoneDifference,
+            _random.NextDouble() < 0.5 ? parent1.PositionWeight : parent2.PositionWeight,
+            _random.NextDouble() < 0.5 ? parent1.StableStone : parent2.StableStone,
+            _random.NextDouble() < 0.5 ? parent1.Mobility : parent2.Mobility,
+            _random.NextDouble() < 0.5 ? parent1.CornerRisk : parent2.CornerRisk,
+            _random.NextDouble() < 0.5 ? parent1.EdgeControl : parent2.EdgeControl,
+            _random.NextDouble() < 0.5 ? parent1.FrontierDiscs : parent2.FrontierDiscs,
+            _random.NextDouble() < 0.5 ? parent1.Parity : parent2.Parity
         );
     }
 
@@ -217,11 +228,22 @@ internal class GeneticAlgorithm
 
     private float MutateValue(float value)
     {
-        if (random.NextDouble() < MutationRate)
+        if (_random.NextDouble() < _mutationRate)
         {
-            var mutationAmount = (float)(random.NextDouble() * 0.05);
+            var mutationAmount = (float)(_random.NextDouble() * 0.05);
             return value + mutationAmount;
         }
         return value;
+    }
+
+    public class Options
+    {
+        public int PopulationSize { get; set; }
+
+        public int TopPerformersSize { get; set; }
+
+        public int Generations { get; set; }
+
+        public float MutationRate { get; set; }
     }
 }
